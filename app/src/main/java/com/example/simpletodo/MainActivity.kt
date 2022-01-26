@@ -1,11 +1,12 @@
 package com.example.simpletodo
 
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
-import android.view.WindowManager
 import android.widget.Button
 import android.widget.EditText
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import org.apache.commons.io.FileUtils
@@ -17,9 +18,53 @@ class MainActivity : AppCompatActivity() {
 
     var listOfTasks = mutableListOf<String>()
     lateinit var adapter: TaskItemAdapter
+    val KEY_ITEM_TEXT: String = "item_text"
+    val KEY_ITEM_POSITION: String = "item_position"
+    val EDIT_TEXT_CODE: Int = 20
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        val activityResultLaunch = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == EDIT_TEXT_CODE) {
+                // There are no request codes
+                val data: Intent = result.data!!
+
+                val itemText = data.getStringExtra(KEY_ITEM_TEXT)
+                val pos = data.extras?.getInt(KEY_ITEM_POSITION)
+                Log.i("position","$itemText")
+
+                //listOfTasks[pos!!] = itemText.toString()
+                listOfTasks.set(pos!!, itemText!!)
+
+                adapter.notifyDataSetChanged()
+                saveItems()
+
+            }
+            else{
+                Log.w("MainActivity", "Unknown Call to registerForActivityResult123")
+            }
+        }
+
+        val onClickListener = object : TaskItemAdapter.onClickListener{
+            override fun onItemClicked(position: Int) {
+                //Log.i("single", "single Click is working")
+                val i = Intent(this@MainActivity, EditActivity::class.java)
+
+
+                //pass the data being edited
+                i.putExtra(KEY_ITEM_TEXT, listOfTasks.get(position))
+                i.putExtra(KEY_ITEM_POSITION, position.toString())
+
+                activityResultLaunch.launch(i)
+                //display the activity
+
+            }
+
+        }
+
+
 
         val onLongClickListener = object : TaskItemAdapter.onLongClickListener{
             override fun onItemLongClicked(position: Int) {
@@ -32,21 +77,14 @@ class MainActivity : AppCompatActivity() {
             }
 
         }
-        //lets detect when the user clicks on the add button!
-//        findViewById<Button>(R.id.button).setOnClickListener{
-//            // code in here is going to be executed when a user clicks on a button
-//            Log.i("Ujwal","User clicked on the ADD Button!!!")
-//        }
 
 
-//        listOfTasks.add("Do laundry")
-//        listOfTasks.add("go for a walk")
 
         loadItems()
         //look up recycler view in the layout
         val recyclerView = findViewById<RecyclerView>(R.id.recyclerView)
         // Create adapter passing in the sample user data
-        adapter = TaskItemAdapter(listOfTasks, onLongClickListener)
+        adapter = TaskItemAdapter(listOfTasks, onLongClickListener, onClickListener)
 
         // Attach the adapter to the recyclerview to populate items
         recyclerView.adapter = adapter
@@ -57,10 +95,17 @@ class MainActivity : AppCompatActivity() {
 
         //setup the button and input filed so the user can enter a task and add it to the list.
 
-        //get the reference to a button
+
+
+
+
+
+
 
         val inputTextField = findViewById<EditText>(R.id.addTaskField)
-        // and then set an onlick listener to it.
+
+        //get the reference to a button
+        // and then set an onclick listener to it.
         findViewById<Button>(R.id.button).setOnClickListener{
             //1. grab the text the user has inputted into @id/addTaskField
             val userinputtedTask = inputTextField.text.toString()
@@ -76,6 +121,9 @@ class MainActivity : AppCompatActivity() {
 
             saveItems()
         }
+
+
+
     }
 
 
@@ -84,13 +132,13 @@ class MainActivity : AppCompatActivity() {
 
 
     //2. create a method to get the file we need
-    fun getDataFile() : File {
+     fun getDataFile() : File {
 
         // every line is going to represent a specific task in our list of tasks
         return File(filesDir,"data.txt")
     }
     // load the items by reading every line in the data file
-    fun loadItems(){
+     fun loadItems(){
         try {
             listOfTasks = FileUtils.readLines(getDataFile(), Charset.defaultCharset())
         }
@@ -110,4 +158,15 @@ class MainActivity : AppCompatActivity() {
         }
 
     }
+
+//    "Depricated"
+//    val REQUEST_CODE: Int = 20
+//
+//    fun onClick(view: View) {
+//        val i = Intent(this@MainActivity, EditActivity::class.java)
+//        i.putExtra("mode", 2) // pass arbitrary data to launched activity
+//        startActivityForResult(i, REQUEST_CODE)
+//    }
+
+    //val getEditedText = registerForActivityResult()
 }
